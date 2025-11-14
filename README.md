@@ -24,69 +24,56 @@ Supports the Tray menu! (Screenshot of running on KDE)
 
 # Installation Options
 
-## 1. Fedora Package (New!)
+## 1. Fedora Package (Updated for v0.14.10!)
 
-For Fedora-based distributions you can build and install Claude Desktop using the provided build script (updated):
+For Fedora-based distributions you can build and install Claude Desktop using the provided build script.
+
+**✨ What's New:**
+- **Native title bar support** - No more double title bar issue!
+- **Fedora 42+ GTK compatibility** - Automatic environment configuration
+- **Improved launcher** - Proper X11/GTK settings out of the box
 
 ```bash
 sudo dnf install rpm-build
-# Clone this repository
+
+# Clone this repository (use your preferred fork)
 git clone https://github.com/bsneed/claude-desktop-fedora.git
 cd claude-desktop-fedora
 
-# Build the package
-sudo ./build-fedora.sh
-
-# Install the package
-# Check what file was actually created
-ls build/electron-app/$(uname -m)/
-
-# Install using the correct filename (example - your version may differ)
-sudo dnf install build/electron-app/$(uname -m)/claude-desktop-*.rpm
-
-# Download standalone Electron
-# The installed Claude Desktop will have GTK conflicts with your system Electron. Download a clean Electron binary
+# Download and install standalone Electron (required before building)
 cd /tmp
 wget https://github.com/electron/electron/releases/download/v37.0.0/electron-v37.0.0-linux-x64.zip
-
-# Extract into /opt
 sudo unzip electron-v37.0.0-linux-x64.zip -d /opt
 sudo mv /opt/electron-v37.0.0-linux-x64 /opt/electron
 sudo chmod +x /opt/electron/electron
+cd -
 
-# Fix the Claude Desktop Script The default script will try to use your system Electron. Replace it with one that uses the standalone version:
+# Build the RPM package
+sudo ./build-fedora.sh
 
-# Backup the original script
-sudo cp /usr/bin/claude-desktop /usr/bin/claude-desktop.backup
-
-# Create the fixed script
-sudo tee /usr/bin/claude-desktop << 'EOF'
-#!/usr/bin/bash
-LOG_FILE="$HOME/claude-desktop-launcher.log"
-
-# Set environment to avoid GTK conflicts
-export GDK_BACKEND=x11
-export GTK_USE_PORTAL=0
-export ELECTRON_DISABLE_SECURITY_WARNINGS=true
-
-# Use the standalone electron installation
-/opt/electron/electron /usr/lib64/claude-desktop/app.asar --ozone-platform-hint=auto --enable-logging=file --log-file=$LOG_FILE --log-level=INFO --disable-gpu-sandbox --no-sandbox "$@"
-EOF
-
-# Make it executable
-sudo chmod +x /usr/bin/claude-desktop
+# Install the package
+sudo dnf install $(uname -m)/claude-desktop-*.rpm
 
 # Launch Claude Desktop
 claude-desktop
-
 ```
 
-Installation video here : https://youtu.be/dvU1yJsyJ5k
+**🎉 That's it!** The launcher script now includes all necessary fixes:
+- Native KDE/GNOME title bar (no double title bar)
+- GTK conflict prevention for Fedora 42+
+- Proper electron path for app drawer compatibility
+- All necessary sandbox and logging flags
 
-Requirements:
-- Fedora 41 Linux distribution
+Installation video here: https://youtu.be/dvU1yJsyJ5k
+
+**Requirements:**
+- Fedora 41+ Linux distribution (tested on Fedora 42)
 - Node.js >= 12.0.0 and npm
+- Standalone Electron installation in `/opt/electron`
 - Root/sudo access for dependency installation
+
+**Known Issues:**
+- If upgrading from an older build, you may need to uninstall the old package first: `sudo dnf remove claude-desktop`
 
 ## 2. Debian Package (New!)
 

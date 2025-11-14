@@ -239,10 +239,34 @@ npx asar extract app.asar app.asar.contents || { echo "asar extract failed"; exi
 echo "🔧 Applying title bar fixes for v0.14.10..."
 
 # Fix 1: Enable native titlebar (remove custom overlay)
-sed -i 's/titleBarStyle:"hidden",show:Cpe||LG,/titleBarStyle:"default",show:Cpe||LG,/g' app.asar.contents/.vite/build/index.js && echo "✓ Native title bar enabled" || echo "⚠ Warning: titleBarStyle fix failed"
+if sed -i 's/titleBarStyle:"hidden",show:Cpe||LG,/titleBarStyle:"default",show:Cpe||LG,/g' app.asar.contents/.vite/build/index.js; then
+    # Verify the fix was applied
+    if grep -q 'titleBarStyle:"default"' app.asar.contents/.vite/build/index.js; then
+        echo "✓ Native title bar enabled"
+    else
+        echo "❌ ERROR: Title bar fix verification failed - pattern may have changed in this version"
+        echo "   This is likely due to version mismatch. Please report this issue."
+        exit 1
+    fi
+else
+    echo "❌ ERROR: Failed to apply titleBarStyle fix"
+    exit 1
+fi
 
 # Fix 2: Set custom overlay bar height to 0 (removes the white/yellow bar)
-sed -i 's/e2=Er?0:36/e2=0/g' app.asar.contents/.vite/build/index.js && echo "✓ Custom overlay bar removed" || echo "⚠ Warning: overlay height fix failed"
+if sed -i 's/e2=Er?0:36/e2=0/g' app.asar.contents/.vite/build/index.js; then
+    # Verify the fix was applied
+    if grep -q 'e2=0' app.asar.contents/.vite/build/index.js; then
+        echo "✓ Custom overlay bar removed"
+    else
+        echo "❌ ERROR: Overlay height fix verification failed - pattern may have changed in this version"
+        echo "   This is likely due to version mismatch. Please report this issue."
+        exit 1
+    fi
+else
+    echo "❌ ERROR: Failed to apply overlay height fix"
+    exit 1
+fi
 
 # Replace native module with stub implementation
 echo "Creating stub native module..."
@@ -360,11 +384,30 @@ MimeType=x-scheme-handler/claude;
 StartupWMClass=Claude
 EOF
 
-# Create launcher script with Wayland flags and logging
-cat > "$INSTALL_DIR/bin/claude-desktop" << EOF
-#!/bin/bash
-LOG_FILE="\$HOME/claude-desktop-launcher.log"
-electron /usr/lib64/claude-desktop/app.asar --ozone-platform-hint=auto --enable-logging=file --log-file=\$LOG_FILE --log-level=INFO "\$@"
+# Create launcher script with environment variables and proper flags for Fedora
+cat > "$INSTALL_DIR/bin/claude-desktop" << 'EOF'
+#!/usr/bin/bash
+LOG_FILE="$HOME/claude-desktop-launcher.log"
+
+# Set environment to avoid GTK conflicts and ensure X11 compatibility
+# These are critical for Fedora 42+ where GTK4 conflicts can occur
+export GDK_BACKEND=x11
+export GTK_USE_PORTAL=0
+export ELECTRON_DISABLE_SECURITY_WARNINGS=true
+export QT_QPA_PLATFORM=xcb
+
+# Use the standalone electron installation with all necessary flags
+# - --ozone-platform-hint=x11: Force X11 for stability on Fedora
+# - --disable-gpu-sandbox --no-sandbox: Avoid sandbox permission issues
+# - Using absolute path to electron for app drawer compatibility
+/opt/electron/electron /usr/lib64/claude-desktop/app.asar \
+  --ozone-platform-hint=x11 \
+  --enable-logging=file \
+  --log-file="$LOG_FILE" \
+  --log-level=INFO \
+  --disable-gpu-sandbox \
+  --no-sandbox \
+  "$@"
 EOF
 chmod +x "$INSTALL_DIR/bin/claude-desktop"
 
