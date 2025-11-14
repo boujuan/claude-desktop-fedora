@@ -236,12 +236,17 @@ cp -r "lib/net45/resources/app.asar.unpacked" electron-app/
 cd electron-app
 npx asar extract app.asar app.asar.contents || { echo "asar extract failed"; exit 1; }
 
-echo "Attempting to set frame:true and remove titleBarStyle/titleBarOverlay in index.js..."
+echo "🔧 Applying title bar fixes for v0.14.10..."
 
-sed -i 's/height:e\.height,titleBarStyle:"default",titleBarOverlay:[^,]\+,/height:e.height,frame:true,/g' app.asar.contents/.vite/build/index.js || echo "Warning: sed command failed to modify index.js"
+# Fix 1: Enable native titlebar (remove custom overlay)
+sed -i 's/titleBarStyle:"hidden",show:Cpe||LG,/titleBarStyle:"default",show:Cpe||LG,/g' app.asar.contents/.vite/build/index.js && echo "✓ Native title bar enabled" || echo "⚠ Warning: titleBarStyle fix failed"
+
+# Fix 2: Set custom overlay bar height to 0 (removes the white/yellow bar)
+sed -i 's/e2=Er?0:36/e2=0/g' app.asar.contents/.vite/build/index.js && echo "✓ Custom overlay bar removed" || echo "⚠ Warning: overlay height fix failed"
 
 # Replace native module with stub implementation
 echo "Creating stub native module..."
+mkdir -p app.asar.contents/node_modules/claude-native
 cat > app.asar.contents/node_modules/claude-native/index.js << EOF
 // Stub implementation of claude-native using KeyboardKey enum values
 const KeyboardKey = {
@@ -291,11 +296,6 @@ cp ../lib/net45/resources/Tray* app.asar.contents/resources/
 # Repackage app.asar
 mkdir -p app.asar.contents/resources/i18n/
 cp ../lib/net45/resources/*.json app.asar.contents/resources/i18n/
-
-echo "Downloading Main Window Fix Assets"
-cd app.asar.contents
-wget -O- https://github.com/emsi/claude-desktop/raw/refs/heads/main/assets/main_window.tgz | tar -zxvf -
-cd ..
 
 npx asar pack app.asar.contents app.asar || { echo "asar pack failed"; exit 1; }
 
