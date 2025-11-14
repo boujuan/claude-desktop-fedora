@@ -163,10 +163,32 @@ fi
 # Download Claude Windows installer
 echo "📥 Downloading Claude Desktop installer..."
 CLAUDE_EXE="$WORK_DIR/Claude-Setup-x64.exe"
-if ! curl -o "$CLAUDE_EXE" "$CLAUDE_DOWNLOAD_URL"; then
+# Use browser headers to bypass Cloudflare protection
+if ! curl -L -o "$CLAUDE_EXE" \
+    -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+    -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
+    -H "Accept-Language: en-US,en;q=0.5" \
+    -H "Sec-Fetch-Dest: document" \
+    -H "Sec-Fetch-Mode: navigate" \
+    -H "Sec-Fetch-Site: none" \
+    "$CLAUDE_DOWNLOAD_URL"; then
     echo "❌ Failed to download Claude Desktop installer"
+    echo "   If you see Cloudflare errors, the redirect URL may be temporarily blocked."
+    echo "   You can manually download from https://claude.ai/download and update CLAUDE_DOWNLOAD_URL."
     exit 1
 fi
+
+# Verify we downloaded an actual executable, not an error page
+if ! file "$CLAUDE_EXE" | grep -q "PE32\|executable"; then
+    echo "❌ Downloaded file is not a valid Windows executable"
+    echo "   File type: $(file "$CLAUDE_EXE")"
+    echo "   This usually means Cloudflare blocked the download."
+    echo ""
+    echo "   Workaround: Manually download the installer from https://claude.ai/download"
+    echo "   Then update CLAUDE_DOWNLOAD_URL in this script to point to your local file."
+    exit 1
+fi
+
 echo "✓ Download complete"
 
 # Extract resources
