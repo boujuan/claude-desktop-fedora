@@ -262,7 +262,7 @@ npx asar extract app.asar app.asar.contents || { echo "asar extract failed"; exi
 echo "🔧 Applying title bar fixes for v0.14.10..."
 
 # Fix 1: Enable native titlebar (remove custom overlay)
-if sed -i 's/titleBarStyle:"hidden",show:Cpe||LG,/titleBarStyle:"default",show:Cpe||LG,/g' app.asar.contents/.vite/build/index.js; then
+if sed -i 's/titleBarStyle:"hidden",/titleBarStyle:"default",/g' app.asar.contents/.vite/build/index.js; then
     # Verify the fix was applied
     if grep -q 'titleBarStyle:"default"' app.asar.contents/.vite/build/index.js; then
         echo "✓ Native title bar enabled"
